@@ -52,6 +52,7 @@ import com.kyant.capsule.ContinuousCapsule
 fun IncomingCallScreen(
     callerName: String = "Unknown Caller",
     callerNumber: String = "+1 234 567 8900",
+    isAnswered: Boolean = false,
     onAccept: () -> Unit = {},
     onDecline: () -> Unit = {}
 ) {
@@ -89,6 +90,11 @@ fun IncomingCallScreen(
 //            modifier = Modifier.fillMaxSize(),
 //            contentScale = ContentScale.Crop
 //        )
+
+        VideoBackground(
+            modifier = Modifier.fillMaxSize(),
+            isConnected = isAnswered
+        )
 
         Column(
             modifier = Modifier

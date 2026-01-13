@@ -1,6 +1,7 @@
 package com.amigo.dialer.contacts
 
 import android.Manifest
+import androidx.compose.foundation.layout.displayCutout
 import android.content.Intent
 import android.widget.Toast
 import android.content.pm.PackageManager
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -49,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalDensity
@@ -80,11 +83,15 @@ import kotlinx.coroutines.launch
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.windowInsetsPadding
 
 @Composable
-fun ContactsScreen() {
+fun ContactsScreen(searchQuery: String = "") {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    
+    android.util.Log.d("ContactsScreen", "ContactsScreen recomposing with searchQuery: '$searchQuery'")
     
     val repository = remember { ContactsRepository(context) }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -94,8 +101,8 @@ fun ContactsScreen() {
     val isImeVisible = WindowInsets.ime.getBottom(density) > 0
     
     var syncCounter by remember { mutableStateOf(0) }
-    var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
+    var internalSearchQuery by remember { mutableStateOf("") }
     
     // Auto-focus and show keyboard when search becomes active
     LaunchedEffect(isSearchActive) {
@@ -111,20 +118,19 @@ fun ContactsScreen() {
         }
     }
     
-    // Use produceState to handle search query changes smoothly
-    val activeQuery by produceState(initialValue = "", searchQuery, syncCounter) {
-        kotlinx.coroutines.delay(300) // Debounce
-        value = searchQuery
-    }
-    
-    // Single stable paging flow that switches based on query
-    val contactsPagingItems = remember(activeQuery, syncCounter) {
-        if (activeQuery.isBlank()) {
-            repository.getContactsPaged()
+    // Use produceState to properly collect the flow when search query changes
+    val contacts by produceState(initialValue = emptyList<Contact>(), internalSearchQuery, syncCounter) {
+        android.util.Log.d("ContactsScreen", "produceState triggered with query: '$internalSearchQuery'")
+        val flow = if (internalSearchQuery.isBlank()) {
+            repository.getContactsFlow()
         } else {
-            repository.searchContactsPaged(activeQuery)
+            repository.searchContacts(internalSearchQuery)
         }
-    }.collectAsLazyPagingItems()
+        flow.collect { contactList ->
+            android.util.Log.d("ContactsScreen", "Flow emitted ${contactList.size} contacts")
+            value = contactList
+        }
+    }
     
     var hasPermission by remember {
         mutableStateOf(
@@ -186,11 +192,118 @@ fun ContactsScreen() {
         )
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
+        // Top Bar with Search
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Black)
+                .windowInsetsPadding(
+                    WindowInsets.systemBars.only(WindowInsetsSides.Top)
+                )
+                .windowInsetsPadding(
+                    WindowInsets.displayCutout.only(WindowInsetsSides.Top)
+                )
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Black)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Title - takes remaining space on left
+            Text(
+                text = "Contacts",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            
+            // Search bar - covers half screen on right
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { RoundedCornerShape(24.dp) },
+                        effects = {
+                            vibrancy()
+                            blur(12f.dp.toPx())
+                            lens(16f.dp.toPx(), 32f.dp.toPx())
+                        },
+                        onDrawSurface = {
+                            drawRect(Color.White.copy(alpha = 0.12f))
+                        }
+                    )
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    
+                    BasicTextField(
+                        value = internalSearchQuery,
+                        onValueChange = { internalSearchQuery = it },
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester),
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            color = Color.White,
+                            fontSize = 14.sp
+                        ),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Search
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onSearch = {
+                                keyboardController?.hide()
+                                focusManager.clearFocus()
+                            }
+                        ),
+                        decorationBox = { innerTextField ->
+                            if (internalSearchQuery.isEmpty()) {
+                                Text(
+                                    text = "Search...",
+                                    fontSize = 14.sp,
+                                    color = Color.White.copy(alpha = 0.5f)
+                                )
+                            }
+                            innerTextField()
+                        }
+                    )
+                    
+                    if (internalSearchQuery.isNotEmpty()) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Clear",
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clickable {
+                                    internalSearchQuery = ""
+                                    focusManager.clearFocus()
+                                }
+                        )
+                    }
+                }
+            }
+        }
+
 //        // Background Image
 //        Image(
 //            painter = painterResource(R.drawable.bg),
@@ -199,12 +312,12 @@ fun ContactsScreen() {
 //            contentScale = ContentScale.Crop
 //        )
 
-        // Log item count for debugging
-        LaunchedEffect(contactsPagingItems.itemCount) {
-            android.util.Log.d("ContactsScreen", "LazyPagingItems itemCount: ${contactsPagingItems.itemCount}")
+        // Log contact count for debugging
+        LaunchedEffect(contacts.size) {
+            android.util.Log.d("ContactsScreen", "Contacts count: ${contacts.size}")
         }
 
-        if (contactsPagingItems.itemCount == 0 && !isSearchActive) {
+        if (contacts.isEmpty() && internalSearchQuery.isBlank()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -222,46 +335,43 @@ fun ContactsScreen() {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(
-                    count = contactsPagingItems.itemCount,
-                    key = contactsPagingItems.itemKey { it.id }
-                ) { index ->
-                    val contact = contactsPagingItems[index]
-                    contact?.let {
-                        ContactItem(
-                            contact = it,
-                            onClick = {
-                                if (hasCallPermission) {
-                                    // Start call using CallManager
-                                    CallManager.startCall(
-                                        context = context,
-                                        phoneNumber = it.phoneNumber,
-                                        callerName = it.name
+                    items = contacts,
+                    key = { it.id }
+                ) { contact ->
+                    ContactItem(
+                        contact = contact,
+                        onClick = {
+                            if (hasCallPermission) {
+                                // Start call using CallManager
+                                CallManager.startCall(
+                                    context = context,
+                                    phoneNumber = contact.phoneNumber,
+                                    callerName = contact.name
+                                )
+                                
+                                // Launch CallActivity
+                                val intent = Intent(context, CallActivity::class.java)
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                context.startActivity(intent)
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    "Please grant call permission to make calls",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                callPermissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.CALL_PHONE,
+                                        Manifest.permission.READ_PHONE_STATE
                                     )
-                                    
-                                    // Launch CallActivity
-                                    val intent = Intent(context, CallActivity::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                    context.startActivity(intent)
-                                } else {
-                                    Toast.makeText(
-                                        context,
-                                        "Please grant call permission to make calls",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    callPermissionLauncher.launch(
-                                        arrayOf(
-                                            Manifest.permission.CALL_PHONE,
-                                            Manifest.permission.READ_PHONE_STATE
-                                        )
-                                    )
-                                }
+                                )
                             }
-                        )
-                    }
+                        }
+                    )
                 }
 
                 // Show no results message when searching with no matches
-                if (isSearchActive && contactsPagingItems.itemCount == 0) {
+                if (internalSearchQuery.isNotBlank() && contacts.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier

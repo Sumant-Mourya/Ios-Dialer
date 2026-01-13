@@ -60,6 +60,7 @@ class ContactsRepository(private val context: Context) {
      */
     fun searchContactsPaged(query: String): Flow<PagingData<Contact>> {
         val normalized = PhoneNumberNormalizer.normalize(query)
+        android.util.Log.d("ContactsRepo", "Searching contacts with query: '$query', normalized: '$normalized'")
         return Pager(
             config = PagingConfig(
                 pageSize = 20,
@@ -77,6 +78,19 @@ class ContactsRepository(private val context: Context) {
      */
     fun getContactsFlow(): Flow<List<Contact>> {
         return contactDao.getAllContacts().map { entities ->
+            entities.map { entity -> entity.toContact(context.contentResolver) }
+        }
+    }
+
+    /**
+     * Search contacts directly without paging
+     */
+    fun searchContacts(query: String): Flow<List<Contact>> {
+        val queryWithWildcards = "%$query%"
+        val normalized = PhoneNumberNormalizer.normalize(query)
+        val normalizedWithWildcards = if (normalized.isNotEmpty()) "%$normalized%" else ""
+        android.util.Log.d("ContactsRepo", "Searching contacts with query: '$queryWithWildcards', normalized: '$normalizedWithWildcards'")
+        return contactDao.searchContacts(queryWithWildcards, normalizedWithWildcards).map { entities ->
             entities.map { entity -> entity.toContact(context.contentResolver) }
         }
     }

@@ -53,10 +53,21 @@ class CallActivity : ComponentActivity() {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
         
+        // Set window background to black to prevent white flash
+        window.setBackgroundDrawableResource(android.R.color.black)
+        
         setContent {
             DialerTheme {
                 val callState by CallManager.callState.collectAsState()
                 var callDuration by remember { mutableStateOf(0L) }
+                var wasIncomingAnswered by remember { mutableStateOf(false) }
+                
+                // Track if incoming call was answered
+                LaunchedEffect(callState) {
+                    if (callState !is CallState.Incoming && callState !is CallState.Idle) {
+                        wasIncomingAnswered = true
+                    }
+                }
                 
                 // Timer for ongoing calls
                 LaunchedEffect(callState) {
@@ -74,8 +85,19 @@ class CallActivity : ComponentActivity() {
                 // Monitor call state to finish activity
                 LaunchedEffect(callState) {
                     if (callState is CallState.Ended || callState is CallState.Idle) {
-                        delay(1000) // Give user time to see call ended
+                        delay(300) // Brief delay before finishing
                         finish()
+                        // Fade out transition
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            overrideActivityTransition(
+                                android.app.Activity.OVERRIDE_TRANSITION_CLOSE,
+                                android.R.anim.fade_in,
+                                android.R.anim.fade_out
+                            )
+                        } else {
+                            @Suppress("DEPRECATION")
+                            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+                        }
                     }
                 }
                 
@@ -84,6 +106,7 @@ class CallActivity : ComponentActivity() {
                         IncomingCallScreen(
                             callerName = state.callerName,
                             callerNumber = state.phoneNumber,
+                            isAnswered = wasIncomingAnswered,
                             onAccept = {
                                 CallManager.acceptCall()
                             },

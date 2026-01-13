@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -53,6 +55,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -83,6 +87,8 @@ import com.kyant.backdrop.effects.vibrancy
 import com.kyant.capsule.ContinuousRoundedRectangle
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.windowInsetsPadding
 
 data class RecentCall(
     val name: String?,
@@ -93,14 +99,17 @@ data class RecentCall(
 )
 
 @Composable
-fun RecentsScreen() {
+fun RecentsScreen(searchQuery: String = "") {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
     val repository = remember { RecentCallRepository(context) }
     val focusManager = LocalFocusManager.current
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val density = LocalDensity.current
     val isImeVisible = WindowInsets.ime.getBottom(density) > 0
+    
+    var internalSearchQuery by remember { mutableStateOf("") }
 
     var hasLogPermission by remember {
         mutableStateOf(
@@ -122,7 +131,6 @@ fun RecentsScreen() {
     // Use collectAsState for automatic UI updates when Room data changes
     val recents by repository.getRecents().collectAsState(initial = emptyList())
     var hasLoadedOnce by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
 
     // Update hasLoadedOnce when we get data
     LaunchedEffect(recents) {
@@ -130,11 +138,11 @@ fun RecentsScreen() {
         if (recents.isNotEmpty()) hasLoadedOnce = true
     }
 
-    val filteredRecents by remember(recents, searchQuery) {
+    val filteredRecents by remember(recents, internalSearchQuery) {
         derivedStateOf {
-            if (searchQuery.isBlank()) recents
+            if (internalSearchQuery.isBlank()) recents
             else recents.filter { call ->
-                val q = searchQuery.trim().lowercase()
+                val q = internalSearchQuery.trim().lowercase()
                 val nameMatch = call.name?.lowercase()?.contains(q) == true
                 val numberMatch = call.number?.lowercase()?.contains(q) == true
                 nameMatch || numberMatch
@@ -195,11 +203,116 @@ fun RecentsScreen() {
         }
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
+        // Top Bar with Search
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Black)
+                .windowInsetsPadding(
+                    WindowInsets.systemBars.only(WindowInsetsSides.Top)
+                )
+                .windowInsetsPadding(
+                    WindowInsets.displayCutout.only(WindowInsetsSides.Top)
+                )
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Black)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Recents",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { ContinuousRoundedRectangle(24.dp) },
+                        effects = {
+                            vibrancy()
+                            blur(12f.dp.toPx())
+                            lens(16f.dp.toPx(), 32f.dp.toPx())
+                        },
+                        onDrawSurface = {
+                            drawRect(Color.White.copy(alpha = 0.12f))
+                        }
+                    )
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    
+                    BasicTextField(
+                        value = internalSearchQuery,
+                        onValueChange = { internalSearchQuery = it },
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester),
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            color = Color.White,
+                            fontSize = 14.sp
+                        ),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Search
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onSearch = {
+                                keyboardController?.hide()
+                                focusManager.clearFocus()
+                            }
+                        ),
+                        decorationBox = { innerTextField ->
+                            if (internalSearchQuery.isEmpty()) {
+                                Text(
+                                    text = "Search...",
+                                    fontSize = 14.sp,
+                                    color = Color.White.copy(alpha = 0.5f)
+                                )
+                            }
+                            innerTextField()
+                        }
+                    )
+                    
+                    if (internalSearchQuery.isNotEmpty()) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Clear",
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clickable {
+                                    internalSearchQuery = ""
+                                    focusManager.clearFocus()
+                                }
+                        )
+                    }
+                }
+            }
+        }
+
 //        Image(
 //            painter = painterResource(R.drawable.bg),
 //            contentDescription = "Background",

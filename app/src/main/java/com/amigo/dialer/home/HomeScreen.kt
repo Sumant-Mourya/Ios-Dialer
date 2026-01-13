@@ -177,11 +177,6 @@ fun HomeScreen() {
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
-            // Top Bar - only show when not on Dialer screen
-            if (selectedTab != BottomTab.Dialer) {
-                TopBar(title = selectedTab.label)
-            }
-
             // Keep all screens alive, just control visibility
             Box(
                 modifier = Modifier
@@ -434,31 +429,5 @@ private fun UnselectedNavItem(tab: BottomTab, onSelect: () -> Unit) {
     }
 }
 
-@Composable
-private fun TopBar(title: String) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.Black)
-            .windowInsetsPadding(
-                WindowInsets.systemBars.only(WindowInsetsSides.Top)
-            )
-            .windowInsetsPadding(
-                WindowInsets.displayCutout.only(WindowInsetsSides.Top)
-            )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-        ) {
-            Text(
-                text = title,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-        }
-    }
-}
+
 
