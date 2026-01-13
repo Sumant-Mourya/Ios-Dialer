@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
@@ -30,6 +32,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardBackspace
@@ -59,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.amigo.dialer.R
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import com.amigo.dialer.call.CallActivity
 import com.amigo.dialer.call.CallManager
 import com.amigo.dialer.call.LiquidCallButton
@@ -125,6 +129,15 @@ fun DialPadScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            // Prevent touches from passing through dialer when tapping empty areas
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        event.changes.forEach { it.consume() }
+                    }
+                }
+            }
     ) {
         Image(
             painter = painterResource(R.drawable.bg),
@@ -304,6 +317,8 @@ fun DialPadScreen(
                         shape = ContinuousCapsule
                     )
                 }
+                Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
+                Spacer(modifier = Modifier.height(88.dp))
             }
         }
     }
@@ -333,8 +348,8 @@ private fun DialKey(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
-            .size(88.dp)
-            .clip(CircleShape)
+            .size(width = 120.dp, height = 60.dp)
+            .clip(RoundedCornerShape(20.dp))
             .combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple(

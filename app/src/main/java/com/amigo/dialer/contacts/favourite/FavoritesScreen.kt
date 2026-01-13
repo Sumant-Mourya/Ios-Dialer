@@ -1,4 +1,4 @@
-package com.amigo.dialer.contacts
+package com.amigo.dialer.contacts.favourite
 
 import android.Manifest
 import android.content.Intent
@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -51,6 +52,8 @@ import androidx.compose.ui.unit.sp
 import com.amigo.dialer.R
 import com.amigo.dialer.call.CallActivity
 import com.amigo.dialer.call.CallManager
+import com.amigo.dialer.contacts.ContactItem
+import com.amigo.dialer.contacts.ContactsRepository
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
@@ -92,7 +95,7 @@ fun FavoritesScreen() {
             override fun DrawScope.drawBackdrop(
                 density: Density,
                 coordinates: LayoutCoordinates?,
-                layerBlock: (androidx.compose.ui.graphics.GraphicsLayerScope.() -> Unit)?
+                layerBlock: (GraphicsLayerScope.() -> Unit)?
             ) {
                 // Empty implementation
             }
@@ -194,7 +197,8 @@ fun FavoritesScreen() {
                                         callerName = contact.name
                                     )
                                     val intent = Intent(context, CallActivity::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                    intent.flags =
+                                        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                                     context.startActivity(intent)
                                 }
                             } else {

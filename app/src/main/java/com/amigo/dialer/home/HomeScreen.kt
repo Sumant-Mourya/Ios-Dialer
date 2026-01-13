@@ -18,8 +18,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material.icons.Icons
@@ -58,8 +61,9 @@ import androidx.compose.ui.zIndex
 import com.amigo.dialer.R
 import com.amigo.dialer.contacts.ContactsRepository
 import com.amigo.dialer.contacts.ContactsScreen
-import com.amigo.dialer.contacts.FavoritesScreen
+import com.amigo.dialer.contacts.favourite.FavoritesScreen
 import com.amigo.dialer.dialpad.DialPadScreen
+import com.amigo.dialer.recentcall.RecentsScreen
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
@@ -149,7 +153,7 @@ fun HomeScreen() {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .zIndex(1f)
+                        .zIndex(3f)
                 ) {
                     DialPadScreen(
                         onNavigateBack = { selectedTab = lastNonDialerTab }
@@ -164,6 +168,16 @@ fun HomeScreen() {
                     .zIndex(if (selectedTab == BottomTab.Favorites) 1f else 0f)
                     .graphicsLayer {
                         alpha = if (selectedTab == BottomTab.Favorites) 1f else 0f
+                    }
+                    .pointerInput(selectedTab) {
+                        if (selectedTab != BottomTab.Favorites) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    event.changes.forEach { it.consume() }
+                                }
+                            }
+                        }
                     }
             ) {
                 if (selectedTab == BottomTab.Favorites) {
@@ -180,11 +194,21 @@ fun HomeScreen() {
                     .graphicsLayer {
                         alpha = if (selectedTab == BottomTab.Recents) 1f else 0f
                     }
+                    .pointerInput(selectedTab) {
+                        if (selectedTab != BottomTab.Recents) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    event.changes.forEach { it.consume() }
+                                }
+                            }
+                        }
+                    }
             ) {
                 if (selectedTab == BottomTab.Recents) {
                     lastNonDialerTab = BottomTab.Recents
                 }
-                PlaceholderScreen(title = "Recents", subtitle = "Recent calls")
+                RecentsScreen()
             }
 
             // Contacts screen - always composed, visibility controlled
@@ -195,6 +219,16 @@ fun HomeScreen() {
                     .graphicsLayer {
                         alpha = if (selectedTab == BottomTab.Contacts) 1f else 0f
                     }
+                    .pointerInput(selectedTab) {
+                        if (selectedTab != BottomTab.Contacts) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    event.changes.forEach { it.consume() }
+                                }
+                            }
+                        }
+                    }
             ) {
                 if (selectedTab == BottomTab.Contacts) {
                     lastNonDialerTab = BottomTab.Contacts
@@ -203,20 +237,18 @@ fun HomeScreen() {
             }
         }
 
-        if (selectedTab != BottomTab.Dialer) {
-            BottomNavPill(
-                selected = selectedTab,
-                onSelect = { tab ->
-                    selectedTab = tab
-                    if (tab != BottomTab.Dialer) {
-                        lastNonDialerTab = tab
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 20.dp)
-            )
-        }
+        BottomNavPill(
+            selected = selectedTab,
+            onSelect = { tab ->
+                selectedTab = tab
+                if (tab != BottomTab.Dialer) {
+                    lastNonDialerTab = tab
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+        )
     }
 }
 
@@ -243,17 +275,17 @@ private fun BottomNavPill(
         modifier = modifier
             .drawBackdrop(
                 backdrop = backdrop,
-                shape = { ContinuousCapsule() },
+                shape = { RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp) },
                 effects = {
                     vibrancy()
                     blur(32f.dp.toPx())
                     lens(36f.dp.toPx(), 72f.dp.toPx())
                 },
                 onDrawSurface = {
-                    drawRect(Color.White.copy(alpha = 0.14f))
+                    drawRect(Color.White.copy(alpha = 0.2f))
                 }
             )
-            // Block clicks from passing through the pill background
+            // Block clicks from passing through the bar background
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
@@ -262,11 +294,12 @@ private fun BottomNavPill(
                     }
                 }
             }
-            .padding(horizontal = 8.dp, vertical = 10.dp)
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
         Row(
-            modifier = Modifier,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
             items.forEach { tab ->
@@ -340,7 +373,7 @@ private fun UnselectedNavItem(tab: BottomTab, onSelect: () -> Unit) {
     Icon(
         imageVector = tab.icon,
         contentDescription = tab.label,
-        tint = Color.White.copy(alpha = 0.7f),
+        tint = Color.Black,
         modifier = Modifier
             .size(32.dp)
             .clip(CircleShape)
@@ -352,77 +385,3 @@ private fun UnselectedNavItem(tab: BottomTab, onSelect: () -> Unit) {
     )
 }
 
-@Composable
-private fun PlaceholderScreen(title: String, subtitle: String) {
-    val backdrop = remember {
-        object : Backdrop {
-            override val isCoordinatesDependent: Boolean = false
-            override fun DrawScope.drawBackdrop(
-                density: Density,
-                coordinates: LayoutCoordinates?,
-                layerBlock: (GraphicsLayerScope.() -> Unit)?
-            ) {
-                // Intentionally empty
-            }
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
-        Image(
-            painter = painterResource(R.drawable.bg),
-            contentDescription = "Background",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { ContinuousRoundedRectangle(24.dp) },
-                        effects = {
-                            vibrancy()
-                            blur(12f.dp.toPx())
-                            lens(20f.dp.toPx(), 40f.dp.toPx())
-                        },
-                        onDrawSurface = {
-                            drawRect(Color.White.copy(alpha = 0.08f))
-                        }
-                    )
-                    .padding(vertical = 32.dp, horizontal = 20.dp)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = title,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = subtitle,
-                        fontSize = 16.sp,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.systemBars))
-        }
-    }
-}

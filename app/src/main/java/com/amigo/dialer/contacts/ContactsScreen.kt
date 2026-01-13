@@ -51,6 +51,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
@@ -76,6 +78,8 @@ import com.kyant.backdrop.effects.vibrancy
 import com.kyant.capsule.ContinuousRoundedRectangle
 import kotlinx.coroutines.launch
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 
 @Composable
 fun ContactsScreen() {
@@ -85,6 +89,9 @@ fun ContactsScreen() {
     val repository = remember { ContactsRepository(context) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val density = LocalDensity.current
+    val isImeVisible = WindowInsets.ime.getBottom(density) > 0
     
     var syncCounter by remember { mutableStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
@@ -95,6 +102,12 @@ fun ContactsScreen() {
         if (isSearchActive) {
             focusRequester.requestFocus()
             keyboardController?.show()
+        }
+    }
+
+    LaunchedEffect(isImeVisible) {
+        if (!isImeVisible) {
+            focusManager.clearFocus()
         }
     }
     
@@ -387,7 +400,8 @@ fun ContactsScreen() {
                 }
 
                 item {
-                    Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.systemBars))
+                    Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
+                    Spacer(modifier = Modifier.height(88.dp))
                 }
             }
         }
