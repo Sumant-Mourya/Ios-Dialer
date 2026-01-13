@@ -119,55 +119,6 @@ fun FavoritesScreen() {
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                Spacer(Modifier.windowInsetsTopHeight(WindowInsets.systemBars))
-                Spacer(Modifier.height(20.dp))
-            }
-
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { ContinuousRoundedRectangle(20.dp) },
-                            effects = {
-                                vibrancy()
-                                blur(10f.dp.toPx())
-                                lens(20f.dp.toPx(), 40f.dp.toPx())
-                            },
-                            onDrawSurface = {
-                                drawRect(Color.White.copy(alpha = 0.06f))
-                            }
-                        )
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = "Favorites",
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Text(
-                            text = "Favorites",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                    Text(
-                        text = if (favorites.isEmpty()) "Pinned contacts you call often" else "Starred contacts from your phone",
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                }
-            }
 
             if (favorites.isEmpty()) {
                 item {

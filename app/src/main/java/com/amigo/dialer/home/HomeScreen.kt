@@ -21,10 +21,15 @@ import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Favorite
@@ -150,7 +155,10 @@ fun HomeScreen() {
     LaunchedEffect(Unit) {
         android.util.Log.d("HomeScreen", "LaunchedEffect started - listening for callEndedEvent")
         CallManager.callEndedEvent.collectLatest {
-            android.util.Log.d("HomeScreen", "Call ended event received in HomeScreen, syncing recents...")
+            android.util.Log.d(
+                "HomeScreen",
+                "Call ended event received in HomeScreen, syncing recents..."
+            )
             val hasCallLogPerm = ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.READ_CALL_LOG
@@ -168,94 +176,105 @@ fun HomeScreen() {
             BackHandler { selectedTab = lastNonDialerTab }
         }
 
-        // Keep all screens alive, just control visibility
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Dialer screen
-            if (selectedTab == BottomTab.Dialer) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Top Bar - only show when not on Dialer screen
+            if (selectedTab != BottomTab.Dialer) {
+                TopBar(title = selectedTab.label)
+            }
+
+            // Keep all screens alive, just control visibility
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f)
+            ) {
+                // Dialer screen
+                if (selectedTab == BottomTab.Dialer) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .zIndex(3f)
+                    ) {
+                        DialPadScreen(
+                            onNavigateBack = { selectedTab = lastNonDialerTab }
+                        )
+                    }
+                }
+
+                // Favorites screen - always composed but visibility controlled
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .zIndex(3f)
+                        .zIndex(if (selectedTab == BottomTab.Favorites) 1f else 0f)
+                        .graphicsLayer {
+                            alpha = if (selectedTab == BottomTab.Favorites) 1f else 0f
+                        }
+                        .pointerInput(selectedTab) {
+                            if (selectedTab != BottomTab.Favorites) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                }
+                            }
+                        }
                 ) {
-                    DialPadScreen(
-                        onNavigateBack = { selectedTab = lastNonDialerTab }
-                    )
-                }
-            }
-
-            // Favorites screen - always composed but visibility controlled
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .zIndex(if (selectedTab == BottomTab.Favorites) 1f else 0f)
-                    .graphicsLayer {
-                        alpha = if (selectedTab == BottomTab.Favorites) 1f else 0f
+                    if (selectedTab == BottomTab.Favorites) {
+                        lastNonDialerTab = BottomTab.Favorites
                     }
-                    .pointerInput(selectedTab) {
-                        if (selectedTab != BottomTab.Favorites) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    event.changes.forEach { it.consume() }
+                    FavoritesScreen()
+                }
+
+                // Recents screen - always composed but visibility controlled
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(if (selectedTab == BottomTab.Recents) 1f else 0f)
+                        .graphicsLayer {
+                            alpha = if (selectedTab == BottomTab.Recents) 1f else 0f
+                        }
+                        .pointerInput(selectedTab) {
+                            if (selectedTab != BottomTab.Recents) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        event.changes.forEach { it.consume() }
+                                    }
                                 }
                             }
                         }
+                ) {
+                    if (selectedTab == BottomTab.Recents) {
+                        lastNonDialerTab = BottomTab.Recents
                     }
-            ) {
-                if (selectedTab == BottomTab.Favorites) {
-                    lastNonDialerTab = BottomTab.Favorites
+                    RecentsScreen()
                 }
-                FavoritesScreen()
-            }
 
-            // Recents screen - always composed but visibility controlled
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .zIndex(if (selectedTab == BottomTab.Recents) 1f else 0f)
-                    .graphicsLayer {
-                        alpha = if (selectedTab == BottomTab.Recents) 1f else 0f
-                    }
-                    .pointerInput(selectedTab) {
-                        if (selectedTab != BottomTab.Recents) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    event.changes.forEach { it.consume() }
+                // Contacts screen - always composed, visibility controlled
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(if (selectedTab == BottomTab.Contacts) 1f else 0f)
+                        .graphicsLayer {
+                            alpha = if (selectedTab == BottomTab.Contacts) 1f else 0f
+                        }
+                        .pointerInput(selectedTab) {
+                            if (selectedTab != BottomTab.Contacts) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        event.changes.forEach { it.consume() }
+                                    }
                                 }
                             }
                         }
+                ) {
+                    if (selectedTab == BottomTab.Contacts) {
+                        lastNonDialerTab = BottomTab.Contacts
                     }
-            ) {
-                if (selectedTab == BottomTab.Recents) {
-                    lastNonDialerTab = BottomTab.Recents
+                    ContactsScreen()
                 }
-                RecentsScreen()
-            }
-
-            // Contacts screen - always composed, visibility controlled
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .zIndex(if (selectedTab == BottomTab.Contacts) 1f else 0f)
-                    .graphicsLayer {
-                        alpha = if (selectedTab == BottomTab.Contacts) 1f else 0f
-                    }
-                    .pointerInput(selectedTab) {
-                        if (selectedTab != BottomTab.Contacts) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    event.changes.forEach { it.consume() }
-                                }
-                            }
-                        }
-                    }
-            ) {
-                if (selectedTab == BottomTab.Contacts) {
-                    lastNonDialerTab = BottomTab.Contacts
-                }
-                ContactsScreen()
             }
         }
 
@@ -392,18 +411,54 @@ private fun SelectedNavItem(tab: BottomTab, onSelect: () -> Unit) {
 
 @Composable
 private fun UnselectedNavItem(tab: BottomTab, onSelect: () -> Unit) {
-    Icon(
-        imageVector = tab.icon,
-        contentDescription = tab.label,
-        tint = Color.Black,
+    Box(
         modifier = Modifier
-            .size(32.dp)
+            .size(60.dp)
             .clip(CircleShape)
+            .background(Color.Transparent)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple(color = Color(0xFF2196F3), bounded = true)
-            ) { onSelect() }
-            .padding(4.dp)
-    )
+            ) { onSelect() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = tab.icon,
+            contentDescription = tab.label,
+            tint = Color.Black,
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .padding(4.dp)
+        )
+    }
+}
+
+@Composable
+private fun TopBar(title: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.Black)
+            .windowInsetsPadding(
+                WindowInsets.systemBars.only(WindowInsetsSides.Top)
+            )
+            .windowInsetsPadding(
+                WindowInsets.displayCutout.only(WindowInsetsSides.Top)
+            )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+        ) {
+            Text(
+                text = title,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+    }
 }
 

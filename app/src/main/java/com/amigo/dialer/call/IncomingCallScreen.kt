@@ -82,27 +82,26 @@ fun IncomingCallScreen(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Background Image
-        Image(
-            painter = painterResource(R.drawable.bg),
-            contentDescription = "Background",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+//        // Background Image
+//        Image(
+//            painter = painterResource(R.drawable.bg),
+//            contentDescription = "Background",
+//            modifier = Modifier.fillMaxSize(),
+//            contentScale = ContentScale.Crop
+//        )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(32.dp),
+                .padding(top=60.dp, start = 32.dp, end = 32.dp, bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Spacer(modifier = Modifier.height(80.dp))
 
             // Caller Info Section
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                verticalArrangement = Arrangement.spacedBy(15.dp)
             ) {
                 // Animated profile picture with pulsing effect
                 Box(
@@ -177,7 +176,7 @@ fun IncomingCallScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 48.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Decline Button (Red)

@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.amigo.dialer.R
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.input.pointer.pointerInput
 import com.amigo.dialer.call.CallActivity
 import com.amigo.dialer.call.CallManager
@@ -155,33 +156,6 @@ fun DialPadScreen(
             Spacer(Modifier.windowInsetsTopHeight(WindowInsets.systemBars))
             Spacer(modifier = Modifier.height(15.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clickable { onNavigateBack() }
-                )
-                Text(
-                    text = "Dialpad",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More",
-                    tint = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
             Spacer(modifier = Modifier.weight(0.2f))
 
             Column(
@@ -192,7 +166,7 @@ fun DialPadScreen(
                 verticalArrangement = Arrangement.Bottom
             ) {
                 // Number pill
-                val displayNumber = if (phoneNumber.isBlank()) "Enter number" else phoneNumber
+                val displayNumber = phoneNumber.ifBlank { "Enter number" }
 
                 Box(
                     modifier = Modifier
@@ -343,34 +317,43 @@ private fun DialKey(
             }
         }
     }
-
+    val shape = RoundedCornerShape(30.dp)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
             .size(width = 120.dp, height = 60.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = ripple(
-                    color = Color(0xFF2196F3),
-                    bounded = true,
-                    radius = 44.dp
-                ),
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
+
+            // ✅ backdrop first with correct shape
             .drawBackdrop(
                 backdrop = backdrop,
-                shape = { CircleShape },
+                shape = { shape },
                 effects = {
                     vibrancy()
                     blur(10f.dp.toPx())
                     lens(18f.dp.toPx(), 36f.dp.toPx())
                 },
                 onDrawSurface = {
-                    drawRect(Color.White.copy(alpha = 0.08f))
+                    drawRoundRect(
+                        color = Color.White.copy(alpha = 0.08f),
+                        cornerRadius = CornerRadius(20.dp.toPx())
+                    )
                 }
+            )
+
+            // ✅ clip AFTER backdrop so ripple is also clipped properly
+            .clip(shape)
+
+            // ✅ clickable after clip so ripple uses rounded shape
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(
+                    bounded = true,
+                    color = Color(0xFF2196F3),
+                    radius = 60.dp
+                ),
+                onClick = onClick,
+                onLongClick = onLongClick
             )
     ) {
         Text(

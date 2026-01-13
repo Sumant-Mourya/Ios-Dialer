@@ -123,13 +123,13 @@ fun OngoingCallScreen(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Background Image
-        Image(
-            painter = painterResource(R.drawable.bg),
-            contentDescription = "Background",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+//        // Background Image
+//        Image(
+//            painter = painterResource(R.drawable.bg),
+//            contentDescription = "Background",
+//            modifier = Modifier.fillMaxSize(),
+//            contentScale = ContentScale.Crop
+//        )
 
         Column(
             modifier = Modifier
