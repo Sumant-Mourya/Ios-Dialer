@@ -107,12 +107,12 @@ fun FavoritesScreen() {
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        Image(
-            painter = painterResource(R.drawable.bg),
-            contentDescription = "Background",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+//        Image(
+//            painter = painterResource(R.drawable.bg),
+//            contentDescription = "Background",
+//            modifier = Modifier.fillMaxSize(),
+//            contentScale = ContentScale.Crop
+//        )
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),

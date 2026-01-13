@@ -191,13 +191,13 @@ fun ContactsScreen() {
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Background Image
-        Image(
-            painter = painterResource(R.drawable.bg),
-            contentDescription = "Background",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+//        // Background Image
+//        Image(
+//            painter = painterResource(R.drawable.bg),
+//            contentDescription = "Background",
+//            modifier = Modifier.fillMaxSize(),
+//            contentScale = ContentScale.Crop
+//        )
 
         // Log item count for debugging
         LaunchedEffect(contactsPagingItems.itemCount) {

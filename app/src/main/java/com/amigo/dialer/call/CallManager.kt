@@ -12,9 +12,16 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import java.lang.ref.WeakReference
 
 object CallManager {
+    
+    // Emitted when a call ends so listeners can trigger immediate sync
+    private val _callEndedEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val callEndedEvent: SharedFlow<Unit> = _callEndedEvent.asSharedFlow()
     
     private val _callState = MutableStateFlow<CallState>(CallState.Idle)
     val callState: StateFlow<CallState> = _callState.asStateFlow()
@@ -127,7 +134,10 @@ object CallManager {
                 setupAudioForCall()
             }
             Call.STATE_DISCONNECTED -> {
+                android.util.Log.d("CallManager", "Call disconnected - emitting callEndedEvent")
                 _callState.value = CallState.Ended
+                _callEndedEvent.tryEmit(Unit)
+                android.util.Log.d("CallManager", "callEndedEvent emitted successfully")
                 resetCallState()
             }
             Call.STATE_CONNECTING -> {

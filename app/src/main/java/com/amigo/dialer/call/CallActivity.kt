@@ -16,7 +16,10 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.amigo.dialer.ui.theme.DialerTheme
+import com.amigo.dialer.recentcall.RecentCallRepository
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class CallActivity : ComponentActivity() {
     
@@ -139,6 +142,19 @@ class CallActivity : ComponentActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
+        android.util.Log.d("CallActivity", "onDestroy - triggering recents sync")
+        
+        // Trigger immediate sync of recents
+        GlobalScope.launch {
+            try {
+                val repo = RecentCallRepository(applicationContext)
+                repo.syncFromDevice()
+                android.util.Log.d("CallActivity", "Recents sync completed from onDestroy")
+            } catch (e: Exception) {
+                android.util.Log.e("CallActivity", "Error syncing recents", e)
+            }
+        }
+        
         // Clean up audio settings
         try {
             audioManager.isSpeakerphoneOn = false

@@ -64,6 +64,10 @@ import com.amigo.dialer.contacts.ContactsScreen
 import com.amigo.dialer.contacts.favourite.FavoritesScreen
 import com.amigo.dialer.dialpad.DialPadScreen
 import com.amigo.dialer.recentcall.RecentsScreen
+import com.amigo.dialer.recentcall.RecentCallRepository
+import com.amigo.dialer.call.CallManager
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.delay
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
@@ -88,6 +92,7 @@ fun HomeScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val contactsRepository = remember { ContactsRepository(context) }
+    val recentCallRepository = remember { RecentCallRepository(context) }
     var syncStarted by remember { mutableStateOf(false) }
 
     val contactsPermissionLauncher = rememberLauncherForActivityResult(
@@ -137,6 +142,23 @@ fun HomeScreen() {
                 } catch (_: Exception) {
                     // Ignore sync failures at startup
                 }
+            }
+        }
+    }
+
+    // Sync recents immediately when a call ends
+    LaunchedEffect(Unit) {
+        android.util.Log.d("HomeScreen", "LaunchedEffect started - listening for callEndedEvent")
+        CallManager.callEndedEvent.collectLatest {
+            android.util.Log.d("HomeScreen", "Call ended event received in HomeScreen, syncing recents...")
+            val hasCallLogPerm = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_CALL_LOG
+            ) == PackageManager.PERMISSION_GRANTED
+            android.util.Log.d("HomeScreen", "Has call log permission: $hasCallLogPerm")
+            if (hasCallLogPerm) {
+                recentCallRepository.syncFromDevice()
+                android.util.Log.d("HomeScreen", "Recents sync completed from HomeScreen")
             }
         }
     }

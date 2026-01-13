@@ -16,6 +16,7 @@ import com.amigo.dialer.contacts.database.ContactEntity
 import com.amigo.dialer.contacts.database.ContactsDatabase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import com.amigo.dialer.contacts.PhoneNumberNormalizer
 
 class ContactsRepository(private val context: Context) {
 
@@ -58,13 +59,14 @@ class ContactsRepository(private val context: Context) {
      * Search contacts with paging
      */
     fun searchContactsPaged(query: String): Flow<PagingData<Contact>> {
+        val normalized = PhoneNumberNormalizer.normalize(query)
         return Pager(
             config = PagingConfig(
                 pageSize = 20,
                 enablePlaceholders = false,
                 prefetchDistance = 10
             ),
-            pagingSourceFactory = { contactDao.searchContactsPaged(query) }
+            pagingSourceFactory = { contactDao.searchContactsPaged(query, normalized) }
         ).flow.map { pagingData ->
             pagingData.map { entity -> entity.toContact(context.contentResolver) }
         }
@@ -97,11 +99,14 @@ class ContactsRepository(private val context: Context) {
             android.util.Log.d("ContactsRepo", "Fetched ${deviceContacts.size} contacts from device")
             
             if (deviceContacts.isNotEmpty()) {
-                val entities = deviceContacts.map { contact ->
+                val deduped = mergeByNormalized(deviceContacts)
+
+                val entities = deduped.map { contact ->
                     ContactEntity(
                         id = contact.id,
                         name = contact.name,
                         phoneNumber = contact.phoneNumber,
+                        normalizedNumber = PhoneNumberNormalizer.normalize(contact.phoneNumber),
                         photoUri = contact.photoUri,
                         isFavorite = contact.isFavorite
                     )
@@ -197,6 +202,19 @@ class ContactsRepository(private val context: Context) {
             photoBitmap = photoBitmap,
             isFavorite = isFavorite
         )
+    }
+
+    private fun mergeByNormalized(deviceContacts: List<Contact>): List<Contact> {
+        val map = linkedMapOf<String, Contact>()
+        deviceContacts.forEach { contact ->
+            val normalized = PhoneNumberNormalizer.normalize(contact.phoneNumber)
+            if (normalized.isBlank()) {
+                map[contact.id] = contact
+            } else if (!map.containsKey(normalized)) {
+                map[normalized] = contact.copy(phoneNumber = contact.phoneNumber)
+            }
+        }
+        return map.values.toList()
     }
 
     // Keep old method for backward compatibility

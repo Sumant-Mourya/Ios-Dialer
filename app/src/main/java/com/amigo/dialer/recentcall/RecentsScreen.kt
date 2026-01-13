@@ -50,6 +50,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -72,6 +73,7 @@ import com.amigo.dialer.R
 import com.amigo.dialer.call.CallActivity
 import com.amigo.dialer.call.CallManager
 import com.amigo.dialer.recentcall.RecentCallRepository
+import kotlinx.coroutines.flow.collectLatest
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
 import androidx.compose.foundation.layout.navigationBars
@@ -83,9 +85,8 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.ime
 
 data class RecentCall(
-    val id: Long,
     val name: String?,
-    val number: String?,
+    val number: String,
     val type: Int,
     val date: Long,
     val durationSec: Long
@@ -118,9 +119,16 @@ fun RecentsScreen() {
         )
     }
 
-    var recents by remember { mutableStateOf<List<RecentCall>>(emptyList()) }
+    // Use collectAsState for automatic UI updates when Room data changes
+    val recents by repository.getRecents().collectAsState(initial = emptyList())
     var hasLoadedOnce by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+
+    // Update hasLoadedOnce when we get data
+    LaunchedEffect(recents) {
+        android.util.Log.d("RecentsScreen", "Recents updated: ${recents.size} items")
+        if (recents.isNotEmpty()) hasLoadedOnce = true
+    }
 
     val filteredRecents by remember(recents, searchQuery) {
         derivedStateOf {
@@ -141,7 +149,6 @@ fun RecentsScreen() {
         if (granted) {
             scope.launch {
                 repository.syncFromDevice()
-                hasLoadedOnce = true
             }
         } else {
             Toast.makeText(context, "Call log permission required", Toast.LENGTH_SHORT).show()
@@ -158,20 +165,6 @@ fun RecentsScreen() {
     }
 
     LaunchedEffect(Unit) {
-        // Show cached data instantly
-        recents = repository.getCachedRecents()
-        if (recents.isNotEmpty()) {
-            hasLoadedOnce = true
-        }
-
-        // Start live updates from DB
-        scope.launch {
-            repository.getRecents().collect { list ->
-                recents = list
-                if (list.isNotEmpty()) hasLoadedOnce = true
-            }
-        }
-
         if (!hasLogPermission) {
             callLogPermissionLauncher.launch(Manifest.permission.READ_CALL_LOG)
         } else {
@@ -207,12 +200,12 @@ fun RecentsScreen() {
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        Image(
-            painter = painterResource(R.drawable.bg),
-            contentDescription = "Background",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+//        Image(
+//            painter = painterResource(R.drawable.bg),
+//            contentDescription = "Background",
+//            modifier = Modifier.fillMaxSize(),
+//            contentScale = ContentScale.Crop
+//        )
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -322,7 +315,7 @@ fun RecentsScreen() {
                     }
                 }
                 else -> {
-                    items(filteredRecents, key = { it.id }) { call ->
+                    items(filteredRecents, key = { it.number }) { call ->
                         RecentCallItem(
                             call = call,
                             onCallBack = {
@@ -408,11 +401,6 @@ private fun RecentCallItem(call: RecentCall, onCallBack: () -> Unit) {
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White
-            )
-            Text(
-                text = call.number ?: "",
-                fontSize = 14.sp,
-                color = Color.White.copy(alpha = 0.7f)
             )
             Text(
                 text = formatCallMeta(call.type, call.durationSec, call.date),

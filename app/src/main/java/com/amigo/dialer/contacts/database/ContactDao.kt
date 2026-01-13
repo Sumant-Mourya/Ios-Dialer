@@ -16,11 +16,11 @@ interface ContactDao {
     @Query("SELECT * FROM contacts ORDER BY name ASC")
     fun getAllContactsPaged(): PagingSource<Int, ContactEntity>
     
-    @Query("SELECT * FROM contacts WHERE name LIKE '%' || :query || '%' OR phoneNumber LIKE '%' || :query || '%' ORDER BY name ASC")
-    fun searchContacts(query: String): Flow<List<ContactEntity>>
+    @Query("SELECT * FROM contacts WHERE name LIKE '%' || :query || '%' OR phoneNumber LIKE '%' || :query || '%' OR normalizedNumber LIKE '%' || :normalized || '%' ORDER BY name ASC")
+    fun searchContacts(query: String, normalized: String): Flow<List<ContactEntity>>
     
-    @Query("SELECT * FROM contacts WHERE name LIKE '%' || :query || '%' OR phoneNumber LIKE '%' || :query || '%' ORDER BY name ASC")
-    fun searchContactsPaged(query: String): PagingSource<Int, ContactEntity>
+    @Query("SELECT * FROM contacts WHERE name LIKE '%' || :query || '%' OR phoneNumber LIKE '%' || :query || '%' OR normalizedNumber LIKE '%' || :normalized || '%' ORDER BY name ASC")
+    fun searchContactsPaged(query: String, normalized: String): PagingSource<Int, ContactEntity>
 
     @Query("SELECT * FROM contacts WHERE isFavorite = 1 ORDER BY name ASC")
     fun getFavoriteContacts(): Flow<List<ContactEntity>>

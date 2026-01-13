@@ -5,9 +5,8 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "recent_calls")
 data class RecentCallEntity(
-    @PrimaryKey val id: Long,
+    @PrimaryKey val number: String, // Use number as primary key for merging
     val name: String?,
-    val number: String?,
     val type: Int,
     val date: Long,
     val durationSec: Long
