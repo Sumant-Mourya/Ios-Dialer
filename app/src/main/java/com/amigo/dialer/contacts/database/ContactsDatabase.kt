@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [ContactEntity::class],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
 abstract class ContactsDatabase : RoomDatabase() {

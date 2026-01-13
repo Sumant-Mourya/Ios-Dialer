@@ -18,7 +18,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.material3.Scaffold
-import com.amigo.dialer.contacts.ContactsScreen
+import com.amigo.dialer.home.HomeScreen
 import com.amigo.dialer.defaultdialer.AboutAppScreen
 import com.amigo.dialer.defaultdialer.DefaultDialerHandler
 import com.amigo.dialer.ui.theme.DialerTheme
@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { _ ->
                     if (isDefaultDialer) {
-                        ContactsScreen()
+                        HomeScreen()
                     } else {
                         DefaultDialerHandler(
                             activity = this@MainActivity,

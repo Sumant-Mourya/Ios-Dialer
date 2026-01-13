@@ -3,6 +3,7 @@ package com.amigo.dialer.contacts
 import android.Manifest
 import android.content.Intent
 import android.widget.Toast
+import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -74,6 +75,7 @@ import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.capsule.ContinuousRoundedRectangle
 import kotlinx.coroutines.launch
+import androidx.core.content.ContextCompat
 
 @Composable
 fun ContactsScreen() {
@@ -111,9 +113,14 @@ fun ContactsScreen() {
         }
     }.collectAsLazyPagingItems()
     
-    var isLoading by remember { mutableStateOf(true) }
-    var isSyncing by remember { mutableStateOf(false) }
-    var hasPermission by remember { mutableStateOf(false) }
+    var hasPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_CONTACTS
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
     var hasCallPermission by remember { mutableStateOf(false) }
 
     // Call permission launcher
@@ -145,38 +152,18 @@ fun ContactsScreen() {
         hasPermission = isGranted
         android.util.Log.d("ContactsScreen", "Permission granted: $isGranted")
         if (isGranted) {
-            isLoading = true
-            scope.launch {
-                try {
-                    // Always sync contacts when permission is granted
-                    repository.syncContacts()
-                    val count = repository.hasContacts()
-                    android.util.Log.d("ContactsScreen", "Has contacts: $count")
-                    
-                    // Give database a moment to finalize writes
-                    kotlinx.coroutines.delay(100)
-                    
-                    // Increment counter to force Pager recreation
-                    syncCounter++
-                    android.util.Log.d("ContactsScreen", "Sync complete, counter: $syncCounter")
-                    isLoading = false
-                } catch (e: Exception) {
-                    android.util.Log.e("ContactsScreen", "Error syncing contacts", e)
-                    Toast.makeText(
-                        context,
-                        "Error loading contacts: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    isLoading = false
-                }
-            }
+            // Trigger pager refresh to load from Room
+            syncCounter++
         } else {
             Toast.makeText(context, "Permission denied", Toast.LENGTH_SHORT).show()
         }
     }
 
     LaunchedEffect(Unit) {
-        permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        if (!hasPermission) {
+            permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        }
+
         // Request call permissions
         callPermissionLauncher.launch(
             arrayOf(
@@ -204,14 +191,7 @@ fun ContactsScreen() {
             android.util.Log.d("ContactsScreen", "LazyPagingItems itemCount: ${contactsPagingItems.itemCount}")
         }
 
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Color.White)
-            }
-        } else if (contactsPagingItems.itemCount == 0 && !isLoading && !isSearchActive) {
+        if (contactsPagingItems.itemCount == 0 && !isSearchActive) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center

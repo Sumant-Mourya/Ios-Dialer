@@ -10,5 +10,6 @@ data class ContactEntity(
     val name: String,
     val phoneNumber: String,
     val photoUri: String?,
+    val isFavorite: Boolean = false,
     val lastUpdated: Long = System.currentTimeMillis()
 )

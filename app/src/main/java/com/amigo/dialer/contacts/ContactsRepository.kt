@@ -39,6 +39,22 @@ class ContactsRepository(private val context: Context) {
     }
 
     /**
+     * Get favorite contacts with paging
+     */
+    fun getFavoriteContactsPaged(): Flow<PagingData<Contact>> {
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false,
+                prefetchDistance = 10
+            ),
+            pagingSourceFactory = { contactDao.getFavoriteContactsPaged() }
+        ).flow.map { pagingData ->
+            pagingData.map { entity -> entity.toContact(context.contentResolver) }
+        }
+    }
+
+    /**
      * Search contacts with paging
      */
     fun searchContactsPaged(query: String): Flow<PagingData<Contact>> {
@@ -64,6 +80,15 @@ class ContactsRepository(private val context: Context) {
     }
 
     /**
+     * Favorite contacts as Flow
+     */
+    fun getFavoriteContactsFlow(): Flow<List<Contact>> {
+        return contactDao.getFavoriteContacts().map { entities ->
+            entities.map { entity -> entity.toContact(context.contentResolver) }
+        }
+    }
+
+    /**
      * Sync contacts from device to Room database
      */
     suspend fun syncContacts() = withContext(Dispatchers.IO) {
@@ -77,7 +102,8 @@ class ContactsRepository(private val context: Context) {
                         id = contact.id,
                         name = contact.name,
                         phoneNumber = contact.phoneNumber,
-                        photoUri = contact.photoUri
+                        photoUri = contact.photoUri,
+                        isFavorite = contact.isFavorite
                     )
                 }
                 
@@ -113,7 +139,8 @@ class ContactsRepository(private val context: Context) {
                 ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
                 ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
                 ContactsContract.CommonDataKinds.Phone.NUMBER,
-                ContactsContract.CommonDataKinds.Phone.PHOTO_URI
+                ContactsContract.CommonDataKinds.Phone.PHOTO_URI,
+                ContactsContract.CommonDataKinds.Phone.STARRED
             ),
             null,
             null,
@@ -125,19 +152,22 @@ class ContactsRepository(private val context: Context) {
             val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
             val numberIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
             val photoIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)
+            val starredIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.STARRED)
 
             while (it.moveToNext()) {
                 val id = it.getString(idIndex)
                 val name = it.getString(nameIndex) ?: "Unknown"
                 val number = it.getString(numberIndex) ?: ""
                 val photoUri = it.getString(photoIndex)
+                val isFavorite = starredIndex != -1 && it.getInt(starredIndex) == 1
 
                 contacts.add(
                     Contact(
                         id = id,
                         name = name,
                         phoneNumber = number,
-                        photoUri = photoUri
+                        photoUri = photoUri,
+                        isFavorite = isFavorite
                     )
                 )
             }
@@ -164,7 +194,8 @@ class ContactsRepository(private val context: Context) {
             name = name,
             phoneNumber = phoneNumber,
             photoUri = photoUri,
-            photoBitmap = photoBitmap
+            photoBitmap = photoBitmap,
+            isFavorite = isFavorite
         )
     }
 

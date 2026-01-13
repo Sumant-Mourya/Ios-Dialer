@@ -21,6 +21,12 @@ interface ContactDao {
     
     @Query("SELECT * FROM contacts WHERE name LIKE '%' || :query || '%' OR phoneNumber LIKE '%' || :query || '%' ORDER BY name ASC")
     fun searchContactsPaged(query: String): PagingSource<Int, ContactEntity>
+
+    @Query("SELECT * FROM contacts WHERE isFavorite = 1 ORDER BY name ASC")
+    fun getFavoriteContacts(): Flow<List<ContactEntity>>
+    
+    @Query("SELECT * FROM contacts WHERE isFavorite = 1 ORDER BY name ASC")
+    fun getFavoriteContactsPaged(): PagingSource<Int, ContactEntity>
     
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(contacts: List<ContactEntity>)
