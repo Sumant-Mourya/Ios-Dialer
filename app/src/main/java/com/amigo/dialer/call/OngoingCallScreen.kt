@@ -102,6 +102,7 @@ fun OngoingCallScreen(
     callDuration: Long = 0L,
     isConnected: Boolean = true,
     isOnHold: Boolean = false,
+    wasIncomingAnswered: Boolean = false,
     onEndCall: () -> Unit = {},
     onToggleMute: (Boolean) -> Unit = {},
     onToggleSpeaker: (Boolean) -> Unit = {},
@@ -143,7 +144,8 @@ fun OngoingCallScreen(
 
         VideoBackground(
             modifier = Modifier.fillMaxSize(),
-            isConnected = isConnected
+            isConnected = isConnected,
+            shouldStartPaused = wasIncomingAnswered
         )
 
         Column(
@@ -559,7 +561,8 @@ private fun formatDuration(seconds: Long): String {
 @Composable
 fun VideoBackground(
     modifier: Modifier = Modifier,
-    isConnected: Boolean = false
+    isConnected: Boolean = false,
+    shouldStartPaused: Boolean = false
 ) {
     val context = LocalContext.current
 
@@ -568,7 +571,7 @@ fun VideoBackground(
             val uri = Uri.parse("android.resource://${context.packageName}/${R.raw.bg_video}")
             setMediaItem(MediaItem.fromUri(uri))
             repeatMode = Player.REPEAT_MODE_ALL
-            playWhenReady = true
+            playWhenReady = !shouldStartPaused
             volume = 0f
             prepare()
         }

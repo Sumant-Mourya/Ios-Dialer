@@ -93,7 +93,8 @@ fun IncomingCallScreen(
 
         VideoBackground(
             modifier = Modifier.fillMaxSize(),
-            isConnected = isAnswered
+            isConnected = isAnswered,
+            shouldStartPaused = isAnswered
         )
 
         Column(

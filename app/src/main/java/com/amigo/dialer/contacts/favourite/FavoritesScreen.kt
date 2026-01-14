@@ -71,7 +71,7 @@ import com.kyant.capsule.ContinuousRoundedRectangle
 import kotlinx.coroutines.launch
 
 @Composable
-fun FavoritesScreen(searchQuery: String = "") {
+fun FavoritesScreen(searchQuery: String = "", isActive: Boolean = true) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val repository = remember { ContactsRepository(context) }
@@ -110,6 +110,13 @@ fun FavoritesScreen(searchQuery: String = "") {
                 Manifest.permission.READ_PHONE_STATE
             )
         )
+    }
+
+    // Clear search when screen becomes inactive
+    LaunchedEffect(isActive) {
+        if (!isActive) {
+            internalSearchQuery = ""
+        }
     }
 
     val backdrop = remember {
@@ -267,7 +274,7 @@ fun FavoritesScreen(searchQuery: String = "") {
                 items(filteredFavorites, key = { it.id }) { contact ->
                     ContactItem(
                         contact = contact,
-                        onClick = {
+                        onCallClick = {
                             if (hasCallPermission) {
                                 scope.launch {
                                     CallManager.startCall(

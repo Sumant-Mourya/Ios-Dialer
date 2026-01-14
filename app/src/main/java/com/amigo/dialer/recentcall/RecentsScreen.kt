@@ -107,7 +107,7 @@ data class RecentCall(
 )
 
 @Composable
-fun RecentsScreen(searchQuery: String = "") {
+fun RecentsScreen(searchQuery: String = "", isActive: Boolean = true) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -195,6 +195,13 @@ fun RecentsScreen(searchQuery: String = "") {
     LaunchedEffect(isImeVisible) {
         if (!isImeVisible) {
             focusManager.clearFocus()
+        }
+    }
+
+    // Clear search when screen becomes inactive
+    LaunchedEffect(isActive) {
+        if (!isActive) {
+            internalSearchQuery = ""
         }
     }
 
@@ -478,11 +485,25 @@ private fun RecentCallItem(call: RecentCall, onCallBack: () -> Unit) {
         }
 
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            val displayName = call.name?.takeIf { it.isNotBlank() } ?: (call.number ?: "Unknown")
+            val truncatedName = remember(displayName) {
+                if (displayName.length <= 25) {
+                    displayName
+                } else {
+                    val lastSpaceIndex = displayName.lastIndexOf(' ', 25)
+                    if (lastSpaceIndex > 0) {
+                        displayName.take(lastSpaceIndex) + "..."
+                    } else {
+                        displayName.take(25) + "..."
+                    }
+                }
+            }
             Text(
-                text = call.name?.takeIf { it.isNotBlank() } ?: (call.number ?: "Unknown"),
+                text = truncatedName,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = Color.White,
+                maxLines = 1
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -557,7 +578,7 @@ private fun formatCallMeta(type: Int, duration: Long, date: Long): String {
         System.currentTimeMillis(),
         DateUtils.MINUTE_IN_MILLIS
     )
-    return "$typeLabel$durationLabel • $timeLabel"
+    return "$durationLabel • $timeLabel"
 }
 
 // Data class exposed to UI

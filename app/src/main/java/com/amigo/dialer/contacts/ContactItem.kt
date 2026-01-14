@@ -38,11 +38,13 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.capsule.ContinuousRoundedRectangle
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Phone
 
 @Composable
 fun ContactItem(
     contact: Contact,
-    onClick: () -> Unit = {}
+    onCallClick: () -> Unit = {}
 ) {
     val backdrop = remember {
         object : Backdrop {
@@ -72,7 +74,6 @@ fun ContactItem(
                     drawRect(Color.White.copy(alpha = 0.05f))
                 }
             )
-            .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -119,6 +120,42 @@ fun ContactItem(
                 fontSize = 14.sp,
                 color = Color.White.copy(alpha = 0.7f)
             )
+        }
+
+        // Glass pill call button
+        val buttonShape = remember { ContinuousRoundedRectangle(24.dp) }
+        Box(
+            modifier = Modifier
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { buttonShape },
+                    effects = {
+                        blur(6f.dp.toPx())
+                    },
+                    onDrawSurface = {
+                        drawRect(Color.White.copy(alpha = 0.15f))
+                    }
+                )
+                .clickable(onClick = onCallClick)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Phone,
+                    contentDescription = "Call",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Call",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White
+                )
+            }
         }
     }
 }

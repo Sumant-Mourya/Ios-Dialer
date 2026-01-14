@@ -138,6 +138,7 @@ class CallActivity : ComponentActivity() {
                             callDuration = callDuration,
                             isConnected = state is CallState.Active || state is CallState.OnHold,
                             isOnHold = state is CallState.OnHold,
+                            wasIncomingAnswered = wasIncomingAnswered,
                             onEndCall = {
                                 CallManager.endCall()
                             },

@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,6 +49,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.GraphicsLayerScope
@@ -218,7 +221,7 @@ fun HomeScreen() {
                     if (selectedTab == BottomTab.Favorites) {
                         lastNonDialerTab = BottomTab.Favorites
                     }
-                    FavoritesScreen()
+                    FavoritesScreen(isActive = selectedTab == BottomTab.Favorites)
                 }
 
                 // Recents screen - always composed but visibility controlled
@@ -243,7 +246,7 @@ fun HomeScreen() {
                     if (selectedTab == BottomTab.Recents) {
                         lastNonDialerTab = BottomTab.Recents
                     }
-                    RecentsScreen()
+                    RecentsScreen(isActive = selectedTab == BottomTab.Recents)
                 }
 
                 // Contacts screen - always composed, visibility controlled
@@ -268,12 +271,12 @@ fun HomeScreen() {
                     if (selectedTab == BottomTab.Contacts) {
                         lastNonDialerTab = BottomTab.Contacts
                     }
-                    ContactsScreen()
+                    ContactsScreen(isActive = selectedTab == BottomTab.Contacts)
                 }
             }
         }
 
-        BottomNavPill(
+        BottomNavigationBar(
             selected = selectedTab,
             onSelect = { tab ->
                 selectedTab = tab
@@ -289,53 +292,57 @@ fun HomeScreen() {
 }
 
 @Composable
-private fun BottomNavPill(
+fun BottomNavigationBar(
     selected: BottomTab,
     onSelect: (BottomTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val backdrop = object : Backdrop {
-        override val isCoordinatesDependent: Boolean = false
-        override fun DrawScope.drawBackdrop(
-            density: Density,
-            coordinates: LayoutCoordinates?,
-            layerBlock: (GraphicsLayerScope.() -> Unit)?
-        ) {
-            // no-op
-        }
-    }
-
-    val items = listOf(BottomTab.Dialer, BottomTab.Favorites, BottomTab.Recents, BottomTab.Contacts)
+    val items = listOf(
+        BottomTab.Dialer,
+        BottomTab.Favorites,
+        BottomTab.Recents,
+        BottomTab.Contacts
+    )
 
     Box(
         modifier = modifier
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp) },
-                effects = {
-                    vibrancy()
-                    blur(32f.dp.toPx())
-                    lens(36f.dp.toPx(), 72f.dp.toPx())
-                },
-                onDrawSurface = {
-                    drawRect(Color.Black)
-                }
-            )
+            .fillMaxWidth()
+            .background(Color.Black)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = { /* Consume clicks on empty areas */ }
+                onClick = { }
             )
-            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .drawBehind {
+                val strokeWidth = 2.dp.toPx()
+                drawLine(
+                    color = Color.White,
+                    start = Offset(0f, 0f),
+                    end = Offset(size.width, 0f),
+                    strokeWidth = strokeWidth
+                )
+            }
             .windowInsetsPadding(WindowInsets.navigationBars)
-    ) {
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    )
+    {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp))
+                .background(Color.Black.copy(alpha = 0.75f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { /* Block clicks on pill background */ }
+                )
+                .padding(vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
             items.forEach { tab ->
                 val isSelected = tab == selected
+
                 if (isSelected) {
                     SelectedNavItem(tab = tab, onSelect = { onSelect(tab) })
                 } else {
@@ -345,6 +352,7 @@ private fun BottomNavPill(
         }
     }
 }
+
 
 @Composable
 private fun SelectedNavItem(tab: BottomTab, onSelect: () -> Unit) {

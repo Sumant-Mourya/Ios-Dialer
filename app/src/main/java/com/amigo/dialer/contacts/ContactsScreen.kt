@@ -87,7 +87,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.windowInsetsPadding
 
 @Composable
-fun ContactsScreen(searchQuery: String = "") {
+fun ContactsScreen(searchQuery: String = "", isActive: Boolean = true) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
@@ -115,6 +115,13 @@ fun ContactsScreen(searchQuery: String = "") {
     LaunchedEffect(isImeVisible) {
         if (!isImeVisible) {
             focusManager.clearFocus()
+        }
+    }
+
+    // Clear search when screen becomes inactive
+    LaunchedEffect(isActive) {
+        if (!isActive) {
+            internalSearchQuery = ""
         }
     }
     
@@ -340,7 +347,7 @@ fun ContactsScreen(searchQuery: String = "") {
                 ) { contact ->
                     ContactItem(
                         contact = contact,
-                        onClick = {
+                        onCallClick = {
                             if (hasCallPermission) {
                                 // Start call using CallManager
                                 CallManager.startCall(

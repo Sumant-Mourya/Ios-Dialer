@@ -224,7 +224,7 @@ fun DialPadScreen(
                     keys.forEach { row ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
                         ) {
                             row.forEach { (digit, hint) ->
                                 DialKey(
@@ -237,7 +237,8 @@ fun DialPadScreen(
                                         { phoneNumber += "+" }
                                     } else {
                                         null
-                                    }
+                                    },
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
                         }
@@ -276,12 +277,14 @@ fun DialPadScreen(
                                 )
                             )
                         },
-                        modifier = Modifier.size(width = 120.dp, height = 70.dp),
+                        modifier = Modifier
+                            .fillMaxWidth(0.4f) // Use 40% of screen width
+                            .height(70.dp),
                         shape = ContinuousCapsule
                     )
                 }
                 Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
-                Spacer(modifier = Modifier.height(88.dp))
+                Spacer(modifier = Modifier.height(92.dp))
             }
         }
     }
@@ -292,7 +295,8 @@ private fun DialKey(
     label: String,
     subLabel: String,
     onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null
+    onLongClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
 ) {
     val backdrop = remember {
         object : Backdrop {
@@ -310,8 +314,9 @@ private fun DialKey(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier
-            .size(width = 120.dp, height = 60.dp)
+        modifier = modifier
+            .fillMaxWidth()
+            .height(60.dp)
 
             // ✅ backdrop first with correct shape
             .drawBackdrop(
