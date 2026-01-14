@@ -28,7 +28,8 @@ class RecentCallRepository(context: Context) {
                     number = entity.number,
                     type = entity.type,
                     date = entity.date,
-                    durationSec = entity.durationSec
+                    durationSec = entity.durationSec,
+                    photoUri = entity.photoUri
                 )
             }
         }
@@ -40,7 +41,7 @@ class RecentCallRepository(context: Context) {
             android.util.Log.d("RecentCallRepo", "[${System.currentTimeMillis()}] Starting sync from device...")
             
             // Build contact names map once for efficient lookup
-            val contactNamesMap = getContactNamesMap()
+            val contactNamesMap = getContactNamesAndPhotoMap()
             
             val projection = arrayOf(
                 CallLog.Calls._ID,
@@ -56,7 +57,7 @@ class RecentCallRepository(context: Context) {
                 projection,
                 null,
                 null,
-                "${CallLog.Calls.DATE} DESC LIMIT 500" // Only get recent 500 calls
+                "${CallLog.Calls.DATE} DESC"
             )
 
         val calls = mutableListOf<RecentCallEntity>()
@@ -80,8 +81,10 @@ class RecentCallRepository(context: Context) {
                 val normalized = PhoneNumberNormalizer.normalize(number)
                 val key = if (normalized.isNotBlank()) normalized else number
                 
-                // Resolve current contact name from map (not stale cached name)
-                val currentName = contactNamesMap[key]
+                // Resolve current contact name and photo from map
+                val contactInfo = contactNamesMap[key]
+                val currentName = contactInfo?.first
+                val photoUri = contactInfo?.second
 
                 calls.add(
                     RecentCallEntity(
@@ -89,7 +92,8 @@ class RecentCallRepository(context: Context) {
                         name = currentName,
                         type = type,
                         date = date,
-                        durationSec = duration
+                        durationSec = duration,
+                        photoUri = photoUri
                     )
                 )
             }
@@ -113,18 +117,20 @@ class RecentCallRepository(context: Context) {
                 number = entity.number,
                 type = entity.type,
                 date = entity.date,
-                durationSec = entity.durationSec
+                durationSec = entity.durationSec,
+                photoUri = entity.photoUri
             )
         }
     }
 
-    private fun getContactNamesMap(): Map<String, String> {
-        val contactMap = mutableMapOf<String, String>()
+    private fun getContactNamesAndPhotoMap(): Map<String, Pair<String, String?>> {
+        val contactMap = mutableMapOf<String, Pair<String, String?>>()
         val cursor = resolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
             arrayOf(
                 ContactsContract.CommonDataKinds.Phone.NUMBER,
-                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                ContactsContract.CommonDataKinds.Phone.PHOTO_URI
             ),
             null,
             null,
@@ -134,15 +140,17 @@ class RecentCallRepository(context: Context) {
         cursor?.use {
             val numberIdx = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
             val nameIdx = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+            val photoIdx = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)
 
             while (it.moveToNext()) {
                 val number = if (numberIdx != -1) it.getString(numberIdx) else null
                 val name = if (nameIdx != -1) it.getString(nameIdx) else null
+                val photoUri = if (photoIdx != -1) it.getString(photoIdx) else null
                 
                 if (!number.isNullOrBlank() && !name.isNullOrBlank()) {
                     val normalized = PhoneNumberNormalizer.normalize(number)
                     val key = if (normalized.isNotBlank()) normalized else number
-                    contactMap[key] = name
+                    contactMap[key] = Pair(name, photoUri)
                 }
             }
         }
@@ -160,10 +168,15 @@ class RecentCallRepository(context: Context) {
             if (existing == null || call.date > existing.date) {
                 // Keep the most recent call, prefer named contacts
                 val name = call.name ?: existing?.name
-                byNumber[call.number] = call.copy(name = name)
+                val photoUri = call.photoUri ?: existing?.photoUri
+                byNumber[call.number] = call.copy(name = name, photoUri = photoUri)
             } else if (existing.name.isNullOrBlank() && !call.name.isNullOrBlank()) {
                 // Update with name if existing has no name
-                byNumber[call.number] = existing.copy(name = call.name)
+                val photoUri = call.photoUri ?: existing.photoUri
+                byNumber[call.number] = existing.copy(name = call.name, photoUri = photoUri)
+            } else if (existing.photoUri.isNullOrBlank() && !call.photoUri.isNullOrBlank()) {
+                // Update with photoUri if existing has no photoUri
+                byNumber[call.number] = existing.copy(photoUri = call.photoUri)
             }
         }
 

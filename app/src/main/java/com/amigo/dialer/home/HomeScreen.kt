@@ -318,18 +318,14 @@ private fun BottomNavPill(
                     lens(36f.dp.toPx(), 72f.dp.toPx())
                 },
                 onDrawSurface = {
-                    drawRect(Color.White.copy(alpha = 0.2f))
+                    drawRect(Color.Black)
                 }
             )
-            // Block clicks from passing through the bar background
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        event.changes.forEach { it.consume() }
-                    }
-                }
-            }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = { /* Consume clicks on empty areas */ }
+            )
             .padding(horizontal = 20.dp, vertical = 12.dp)
             .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
@@ -420,7 +416,7 @@ private fun UnselectedNavItem(tab: BottomTab, onSelect: () -> Unit) {
         Icon(
             imageVector = tab.icon,
             contentDescription = tab.label,
-            tint = Color.Black,
+            tint = Color.White,
             modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)

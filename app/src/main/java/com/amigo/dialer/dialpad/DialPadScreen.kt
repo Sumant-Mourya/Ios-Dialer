@@ -130,23 +130,12 @@ fun DialPadScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            // Prevent touches from passing through dialer when tapping empty areas
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        event.changes.forEach { it.consume() }
-                    }
-                }
-            }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = { /* Consume clicks on empty areas */ }
+            )
     ) {
-//        Image(
-//            painter = painterResource(R.drawable.bg),
-//            contentDescription = "Background",
-//            modifier = Modifier.fillMaxSize(),
-//            contentScale = ContentScale.Crop
-//        )
-
         Column(
             modifier = Modifier
                 .fillMaxSize()

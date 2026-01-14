@@ -28,8 +28,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -41,9 +43,14 @@ import androidx.compose.material.icons.filled.CallMade
 import androidx.compose.material.icons.filled.CallMissed
 import androidx.compose.material.icons.filled.CallReceived
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.ui.draw.clip
+import androidx.core.net.toUri
+import coil.compose.AsyncImage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -95,7 +102,8 @@ data class RecentCall(
     val number: String,
     val type: Int,
     val date: Long,
-    val durationSec: Long
+    val durationSec: Long,
+    val photoUri: String? = null
 )
 
 @Composable
@@ -407,38 +415,67 @@ private fun RecentCallItem(call: RecentCall, onCallBack: () -> Unit) {
         }
     }
 
-    val (icon, tint) = when (call.type) {
-        CallLog.Calls.OUTGOING_TYPE -> Icons.AutoMirrored.Filled.CallMade to Color(0xFF4CAF50)
-        CallLog.Calls.MISSED_TYPE -> Icons.AutoMirrored.Filled.CallMissed to Color(0xFFFF6B6B)
-        else -> Icons.AutoMirrored.Filled.CallReceived to Color(0xFF64B5F6)
+    val (icon, tint) = remember(call.type) {
+        when (call.type) {
+            CallLog.Calls.OUTGOING_TYPE -> Icons.AutoMirrored.Filled.CallMade to Color(0xFF4CAF50)
+            CallLog.Calls.MISSED_TYPE -> Icons.AutoMirrored.Filled.CallMissed to Color(0xFFFF6B6B)
+            else -> Icons.AutoMirrored.Filled.CallReceived to Color(0xFF64B5F6)
+        }
     }
+
+    val cardShape = remember { ContinuousRoundedRectangle(20.dp) }
+    val buttonShape = remember { ContinuousRoundedRectangle(24.dp) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .drawBackdrop(
                 backdrop = backdrop,
-                shape = { ContinuousRoundedRectangle(20.dp) },
+                shape = { cardShape },
                 effects = {
-                    vibrancy()
-                    blur(8f.dp.toPx())
-                    lens(16f.dp.toPx(), 32f.dp.toPx())
+                    blur(4f.dp.toPx())
                 },
                 onDrawSurface = {
                     drawRect(Color.White.copy(alpha = 0.05f))
                 }
             )
-            .clickable(onClick = onCallBack)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = "Call type",
-            tint = tint,
-            modifier = Modifier.size(28.dp)
-        )
+        // Profile Picture
+        Box(
+            modifier = Modifier
+                .size(50.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!call.photoUri.isNullOrBlank()) {
+                AsyncImage(
+                    model = coil.request.ImageRequest.Builder(LocalContext.current)
+                        .data(call.photoUri.toUri())
+                        .crossfade(true)
+                        .size(50.dp.value.toInt())
+                        .build(),
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            
+            // Show default icon if no photo or as fallback
+            if (call.photoUri.isNullOrBlank()) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Default Avatar",
+                    modifier = Modifier.size(30.dp),
+                    tint = Color.White.copy(alpha = 0.6f)
+                )
+            }
+        }
 
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
@@ -447,11 +484,57 @@ private fun RecentCallItem(call: RecentCall, onCallBack: () -> Unit) {
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White
             )
-            Text(
-                text = formatCallMeta(call.type, call.durationSec, call.date),
-                fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.6f)
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = "Call type",
+                    tint = tint,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = formatCallMeta(call.type, call.durationSec, call.date),
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.6f)
+                )
+            }
+        }
+
+        // Glass pill call button
+        Box(
+            modifier = Modifier
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { buttonShape },
+                    effects = {
+                        blur(6f.dp.toPx())
+                    },
+                    onDrawSurface = {
+                        drawRect(Color.White.copy(alpha = 0.15f))
+                    }
+                )
+                .clickable(onClick = onCallBack)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Phone,
+                    contentDescription = "Call",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Call",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White
+                )
+            }
         }
     }
 }

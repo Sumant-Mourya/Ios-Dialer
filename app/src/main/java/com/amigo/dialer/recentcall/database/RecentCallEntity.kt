@@ -9,5 +9,6 @@ data class RecentCallEntity(
     val name: String?,
     val type: Int,
     val date: Long,
-    val durationSec: Long
+    val durationSec: Long,
+    val photoUri: String? = null
 )
